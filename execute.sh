@@ -1,0 +1,1 @@
+source .venv311/bin/activate && python -m operate.main -m llava --prompt "ENTER_YOUR_PROMPT_HERE"
