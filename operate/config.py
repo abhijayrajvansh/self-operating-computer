@@ -46,6 +46,9 @@ class Config:
         self.qwen_api_key = (
             None  # instance variables are backups in case saving to a `.env` fails
         )
+        self.openrouter_api_key = (
+            None  # instance variables are backups in case saving to a `.env` fails
+        )
 
     def initialize_openai(self):
         if self.verbose:
@@ -128,6 +131,29 @@ class Config:
             api_key = os.getenv("ANTHROPIC_API_KEY")
         return anthropic.Anthropic(api_key=api_key)
 
+    def initialize_openrouter(self):
+        if self.verbose:
+            print("[Config][initialize_openrouter]")
+
+        if self.openrouter_api_key:
+            if self.verbose:
+                print("[Config][initialize_openrouter] using cached openrouter_api_key")
+            api_key = self.openrouter_api_key
+        else:
+            if self.verbose:
+                print(
+                    "[Config][initialize_openrouter] no cached openrouter_api_key, try to get from env."
+                )
+            api_key = os.getenv("OPENROUTER_API_KEY")
+
+        client = OpenAI(
+            api_key=api_key,
+            base_url="https://openrouter.ai/api/v1",
+        )
+        client.api_key = api_key
+        client.base_url = "https://openrouter.ai/api/v1"
+        return client
+
     def validation(self, model, voice_mode):
         """
         Validate the input parameters for the dialog operation.
@@ -149,6 +175,11 @@ class Config:
             "ANTHROPIC_API_KEY", "Anthropic API key", model == "claude-3"
         )
         self.require_api_key("QWEN_API_KEY", "Qwen API key", model == "qwen-vl")
+        self.require_api_key(
+            "OPENROUTER_API_KEY", 
+            "OpenRouter API key", 
+            model.startswith("openrouter-")
+        )
 
     def require_api_key(self, key_name, key_description, is_required):
         key_exists = bool(os.environ.get(key_name))
@@ -177,6 +208,8 @@ class Config:
                 self.anthropic_api_key = key_value
             elif key_name == "QWEN_API_KEY":
                 self.qwen_api_key = key_value
+            elif key_name == "OPENROUTER_API_KEY":
+                self.openrouter_api_key = key_value
             self.save_api_key_to_env(key_name, key_value)
             load_dotenv()  # Reload environment variables
             # Update the instance attribute with the new key

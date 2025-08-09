@@ -62,6 +62,9 @@ async def get_next_action(model, messages, objective, session_id):
     if model == "claude-3":
         operation = await call_claude_3_with_ocr(messages, objective, model)
         return operation, None
+    if model.startswith("openrouter-"):
+        operation = await call_openrouter_with_ocr(messages, objective, model)
+        return operation, None
     raise ModelNotRecognizedException(model)
 
 
@@ -1137,3 +1140,124 @@ def clean_json(content):
         print("\n\n[clean_json] content after cleaning", content)
 
     return content
+
+
+async def call_openrouter_with_ocr(messages, objective, model):
+    """
+    Call OpenRouter API with OCR functionality.
+    
+    Args:
+        messages: List of conversation messages
+        objective: The user's objective
+        model: Model name in format "openrouter-{provider}/{model_name}"
+    
+    Returns:
+        Parsed JSON response with operations
+    """
+    if config.verbose:
+        print("[call_openrouter_with_ocr]")
+
+    try:
+        time.sleep(1)
+        client = config.initialize_openrouter()
+
+        confirm_system_prompt(messages, objective, model)
+        screenshots_dir = "screenshots"
+        if not os.path.exists(screenshots_dir):
+            os.makedirs(screenshots_dir)
+
+        screenshot_filename = os.path.join(screenshots_dir, "screenshot.png")
+        capture_screen_with_cursor(screenshot_filename)
+
+        with open(screenshot_filename, "rb") as img_file:
+            img_base64 = base64.b64encode(img_file.read()).decode("utf-8")
+
+        if len(messages) == 1:
+            user_prompt = get_user_first_message_prompt()
+        else:
+            user_prompt = get_user_prompt()
+
+        # Extract the actual model name (remove "openrouter-" prefix)
+        actual_model = model.replace("openrouter-", "")
+
+        vision_message = {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": user_prompt + "**REMEMBER** Only output json format, do not append any other text."},
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:image/png;base64,{img_base64}"},
+                },
+            ],
+        }
+        messages.append(vision_message)
+
+        response = client.chat.completions.create(
+            model=actual_model,
+            messages=messages,
+            temperature=0.7,
+            max_tokens=2000,
+        )
+
+        content = response.choices[0].message.content
+        content = clean_json(content)
+        content_str = content
+
+        try:
+            content = json.loads(content)
+        except json.JSONDecodeError as e:
+            if config.verbose:
+                print(
+                    f"{ANSI_GREEN}[Self-Operating Computer]{ANSI_RED}[Error] JSONDecodeError: {e} {ANSI_RESET}"
+                )
+            # Try to fix JSON and retry
+            response = client.chat.completions.create(
+                model=actual_model,
+                messages=[
+                    {
+                        "role": "system", 
+                        "content": f"This json string is not valid, when using with json.loads(content) it throws the following error: {e}, return correct json string. **REMEMBER** Only output json format, do not append any other text."
+                    },
+                    {"role": "user", "content": content_str}
+                ],
+                temperature=0.1,
+                max_tokens=2000,
+            )
+            content = response.choices[0].message.content
+            content = clean_json(content)
+            content_str = content
+            content = json.loads(content)
+
+        if config.verbose:
+            print(
+                f"{ANSI_GREEN}[Self-Operating Computer]{ANSI_BRIGHT_MAGENTA}[{model}] content: {content} {ANSI_RESET}"
+            )
+
+        processed_content = []
+        for operation in content:
+            processed_content.append(operation)
+
+        assistant_message = {"role": "assistant", "content": content_str}
+        messages.append(assistant_message)
+
+        if config.verbose:
+            print(
+                "[call_openrouter_with_ocr] processed_content",
+                processed_content,
+            )
+
+        return processed_content
+
+    except Exception as e:
+        print(
+            f"{ANSI_GREEN}[Self-Operating Computer]{ANSI_BRIGHT_MAGENTA}[OpenRouter] That did not work. Trying again {ANSI_RESET}",
+            e,
+        )
+        print(
+            f"{ANSI_GREEN}[Self-Operating Computer]{ANSI_RED}[Error] AI response was {ANSI_RESET}",
+            content if 'content' in locals() else 'No content available',
+        )
+        if config.verbose:
+            traceback.print_exc()
+        # Retry once
+        return await call_openrouter_with_ocr(messages, objective, model)

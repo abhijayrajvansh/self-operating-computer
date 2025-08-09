@@ -13,7 +13,7 @@ def main_entry():
     parser.add_argument(
         "-m",
         "--model",
-        help="Specify the model to use",
+        help="Specify the model to use. For OpenRouter models, use format: openrouter-{provider}/{model} (e.g., openrouter-anthropic/claude-3.5-sonnet, openrouter-openai/gpt-4o, openrouter-google/gemini-pro-vision)",
         required=False,
         default="gpt-4-with-ocr",
     )

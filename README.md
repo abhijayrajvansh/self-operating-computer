@@ -89,6 +89,36 @@ Use Qwen-vl with Vision to see how it stacks up to GPT-4-Vision at operating a c
 operate -m qwen-vl
 ```
 
+#### Try OpenRouter Models `-m openrouter-{provider}/{model}`
+Use any vision-capable model available through OpenRouter! This gives you access to models from multiple providers through a single API. Navigate to the [OpenRouter dashboard](https://openrouter.ai/) to get an API key.
+
+Popular OpenRouter models you can try:
+```bash
+# Anthropic Claude 3.5 Sonnet
+operate -m openrouter-anthropic/claude-3.5-sonnet
+
+# OpenAI GPT-4o through OpenRouter
+operate -m openrouter-openai/gpt-4o
+
+# Google Gemini Pro Vision
+operate -m openrouter-google/gemini-pro-vision
+
+# Meta Llama Vision models
+operate -m openrouter-meta-llama/llama-3.2-90b-vision-instruct
+
+# Other vision-capable models (check OpenRouter for latest)
+operate -m openrouter-anthropic/claude-3-opus
+operate -m openrouter-openai/gpt-4-vision-preview
+```
+
+**Benefits of using OpenRouter:**
+- Access to multiple AI providers through one API
+- Often more competitive pricing
+- Access to latest models from various providers
+- Unified billing and usage tracking
+
+**Setup:** When you first run an OpenRouter model, you'll be prompted for your OpenRouter API key. You can get one at https://openrouter.ai/
+
 #### Try LLaVa Hosted Through Ollama `-m llava`
 If you wish to experiment with the Self-Operating Computer Framework using LLaVA on your own machine, you can with Ollama!   
 *Note: Ollama currently only supports MacOS and Linux. Windows now in Preview*   
